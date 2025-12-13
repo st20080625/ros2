@@ -36,7 +36,7 @@ def MakeRotate_Mat(theta):
                      [np.sin(theta),  np.cos(theta)]])
 
 def calc_J(p, x, y):
-    """ y(p) = R(theta) * [x, y] + [tx, ty] のヤコビ """
+    # y(p) = R(theta) * [x, y] + [tx, ty] Jacobian of y(p)
     theta = p[2]
     J = np.array([
         [1, 0, -x*np.sin(theta) - y*np.cos(theta)],
@@ -45,11 +45,11 @@ def calc_J(p, x, y):
     return J
 
 def calc_grad_y(Rp, Sigma_inv):
-    """ y空間での勾配 ∇y f """
+    # ∇y f   grad vector
     return - Sigma_inv @ Rp
 
 def calc_Hf_y(Sigma_inv):
-    """ y空間でのヘッセ行列 Hf """
+    # Hf     hessian matrix
     return -Sigma_inv
 
 def matching_manual(all_scan, current_scan):
@@ -64,13 +64,13 @@ def matching_manual(all_scan, current_scan):
     grid = [[[] for _ in range(height)] for _ in range(width)]
     average_and_covariance = [[None for _ in range(height)] for _ in range(width)]
 
-    # 点をグリッドに格納
+    # put the scan points into a grid
     for pt in all_scan:
         gx = int((pt[0]-min_x)/box_size)
         gy = int((pt[1]-min_y)/box_size)
         grid[gx][gy].append(pt)
 
-    # 平均と共分散を計算
+    # calc average and covariance matrix
     for i in range(width):
         for j in range(height):
             if len(grid[i][j]) < 3:
@@ -80,15 +80,15 @@ def matching_manual(all_scan, current_scan):
             cov = np.cov(pts, rowvar=False)
             average_and_covariance[i][j] = (mean, cov)
 
-    # 初期化
+    # init
     p = np.zeros(3)
     while True:
         grad_total = np.zeros(3)
         H_total = np.zeros((3,3))
-        # スコアを勾配とヘッセに変換して合計
+        # convert the score to the grad vector and hessian matrix
         for i in range(len(current_scan)):
             x, y = current_scan[i]
-            # どのグリッドに入るか
+            # calc the pos of the grid
             gx = int((all_scan[i][0]-min_x)/box_size)
             gy = int((all_scan[i][1]-min_y)/box_size)
             cell = average_and_covariance[gx][gy]
@@ -98,26 +98,50 @@ def matching_manual(all_scan, current_scan):
             Sigma_inv = np.linalg.inv(cov)
             R = MakeRotate_Mat(p[2])
             Rp = R @ np.array([x,y]) + (np.array([p[0], p[1]]) - mean)
-            # y空間勾配とヘッセ
+            # grad vector and hessian matrix
             grad_y = calc_grad_y(Rp, Sigma_inv)
             Hf = calc_Hf_y(Sigma_inv)
-            # ヤコビ
+            # Jacobian
             J = calc_J(p, x, y)
-            # gradとHess計算
+            # calc grad_total and hessian_total
             grad_total += J.T @ grad_y
             H_total += J.T @ Hf @ J
 
         delta_p = -np.linalg.inv(H_total) @ grad_total
         p_prev = p.copy()
         p += delta_p
+        # check the convergence of delta_p
         if np.linalg.norm(p - p_prev) < 1e-3:
             break
     return p
 
-# 点群を回転
+# rotate points
 for i in range(len(Points)):
-    Rotated_Points.append(MakeAffine(Points[i], np.pi/6, np.array([0,0])))
+    Rotated_Points.append(MakeAffine(Points[i], np.pi/3, np.array([1,1])))
 
 delta_p = matching_manual(Points, Rotated_Points)
-print("delta_p:", delta_p)
 
+Rotated_Points_by_delta_p = []
+for i in range(len(Points)):
+    # inverse transform
+    Rotated_Points_by_delta_p.append(MakeAffine(Rotated_Points[i], delta_p[2], np.array([delta_p[0], delta_p[1]])))
+
+# plot
+plt_points = np.stack(Points)
+plt_rotated_points = np.stack(Rotated_Points)
+plt_rotated_points_by_delta_p = np.stack(Rotated_Points_by_delta_p)
+
+plt.figure(figsize=(8, 8))
+plt.scatter(plt_points[:,0], plt_points[:,1], c='blue', marker='o', label='Original Points')
+plt.scatter(plt_rotated_points[:,0], plt_rotated_points[:,1], c='red', marker='x', label='Rotated_Points')
+plt.scatter(plt_rotated_points_by_delta_p[:,0], plt_rotated_points_by_delta_p[:,1], c='green', marker='^', label='Recovered Points')
+
+plt.axis('equal')
+plt.legend()
+plt.title('Point Cloud Matching Visualization')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.grid(True)
+print("delta_p:", delta_p)
+plt.savefig("result.png")
+plt.show()
