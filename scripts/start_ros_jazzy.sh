@@ -1,7 +1,8 @@
 #!/bin/bash
+xhost +local:
 
-sudo docker compose up -d ros2
+docker compose up -d ros2
 
-sudo docker ps
+docker ps
 
-sudo docker exec -it ros2-jazzy /bin/bash
+docker exec -it ros2-jazzy /bin/bash

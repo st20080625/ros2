@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     ros-jazzy-imu-tools \
     ros-jazzy-navigation2 \
     ros-jazzy-nav2-bringup \
+    ros-jazzy-foxglove-bridge \
     neovim \
     tree \
  && rm -rf /var/lib/apt/lists/*
@@ -33,7 +34,10 @@ RUN python3 -m venv /home/${USERNAME}/pio-venv \
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
  && echo "alias python='python3'" >> ~/.bashrc \
  && echo "alias vim='nvim'" >> ~/.bashrc \
- && echo "alias platformio='$HOME/pio-venv/bin/pio'" >> ~/.bashrc
+ && echo "alias platformio='$HOME/pio-venv/bin/pio'" >> ~/.bashrc \
+ && echo "export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json" >> ~/.bashrc \
+ && echo "export __GLX_VENDOR_LIBRARY_NAME=nvidia" >> ~/.bashrc
+
 
 # create platformio's venv penv
 RUN rm -rf ~/.platformio/penv \

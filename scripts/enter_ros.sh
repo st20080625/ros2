@@ -3,9 +3,9 @@
 SERVICE_NAME="ros2"
 CONTAINER_NAME="ros2-jazzy"
 
-if [ "$(sudo docker compose ps -q ${SERVICE_NAME})" ]; then
+if [ "$(docker compose ps -q ${SERVICE_NAME})" ]; then
   echo "Entering ${CONTAINER_NAME}."
-  sudo docker exec -it ${CONTAINER_NAME} /bin/bash
+  docker exec -it ${CONTAINER_NAME} /bin/bash
 else
   echo "${CONTAINER_NAME} is not running."
   exit 1
